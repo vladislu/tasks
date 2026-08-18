@@ -30,13 +30,16 @@ import type {
   KanbanStore,
   KanbanTheme,
   Ticket,
+  TicketFormLayout,
 } from '../kanban/types';
 import {
   THEMES,
   VIEWS,
   readTheme,
+  readTicketFormLayout,
   readView,
   writeTheme,
+  writeTicketFormLayout,
   writeView,
 } from '../preferences';
 import type {SyncStatus} from '../storage/types';
@@ -380,6 +383,8 @@ export function KanbanManager({
 }: KanbanManagerProps) {
   const [theme, setTheme] = useState<KanbanTheme>(readTheme);
   const [view, setView] = useState(readView);
+  const [ticketFormLayout, setTicketFormLayout] =
+    useState<TicketFormLayout>(readTicketFormLayout);
   const [searchQuery, setSearchQuery] = useState('');
   const [modal, setModal] = useState<ModalState | null>(null);
   const [sourceDraft, setSourceDraft] = useState('');
@@ -408,6 +413,10 @@ export function KanbanManager({
   useEffect(() => {
     writeView(view);
   }, [view]);
+
+  useEffect(() => {
+    writeTicketFormLayout(ticketFormLayout);
+  }, [ticketFormLayout]);
 
   useEffect(() => {
     if (!sourceDirty) setSourceDraft(source);
@@ -985,6 +994,8 @@ export function KanbanManager({
           submitLabel="Create ticket"
           lists={board.lists}
           suggestedTicketId={nextTicketRef(board)}
+          layout={ticketFormLayout}
+          onLayoutChange={setTicketFormLayout}
           initial={{
             listId: modal.listId,
             title: '',
@@ -1008,6 +1019,8 @@ export function KanbanManager({
         submitLabel="Save ticket"
         lists={board.lists}
         suggestedTicketId={nextTicketRef(board)}
+        layout={ticketFormLayout}
+        onLayoutChange={setTicketFormLayout}
         initial={{
           listId: found.list.id,
           title: found.ticket.title,

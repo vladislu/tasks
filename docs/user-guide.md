@@ -38,6 +38,10 @@ Lists can be reordered by dragging their header, renamed, cleared and deleted. D
 - **Description** — free text. Kept in the app, but not part of the Mermaid diagram (see below).
 - **Metadata** — any key/value pairs you want, e.g. `sprint: 24` or `repo: api`. Keys are lower-cased and stripped of characters Mermaid cannot carry. A handful of keys are reserved because Mermaid already uses them: `ticket`, `assigned`, `priority`, `label`, `icon`, `shape`.
 
+### Form layout
+
+The **New** switch beside the form's close button widens it into two columns: every field on the left, the description alone on the right, where it grows as tall as the fields beside it. Turn it off for the single-column form. Like the theme, the choice is remembered on this device and applies to both creating and editing a ticket.
+
 ### Moving tickets
 
 Drag a card to another list, or drop it between cards to reorder. The arrow buttons on each card move it one list left or right, which is often faster and works without a mouse.

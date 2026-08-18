@@ -2,6 +2,9 @@ export type KanbanTheme = 'pink' | 'light' | 'dark' | 'contrast';
 
 export type KanbanView = 'board' | 'diagram' | 'source';
 
+/** Shape of the ticket form: `split` moves the description into its own column. */
+export type TicketFormLayout = 'classic' | 'split';
+
 /**
  * Priorities understood by Mermaid's kanban renderer. Anything else is dropped
  * on render, so the editor only offers these values.

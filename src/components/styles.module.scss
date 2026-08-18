@@ -1006,6 +1006,11 @@
   max-width: 620px;
 }
 
+/* Two columns of fields need roughly twice the room of one. */
+.modalSplit {
+  max-width: 900px;
+}
+
 @keyframes modalIn {
   from {
     opacity: 0;
@@ -1033,10 +1038,75 @@
   }
 }
 
+.modalHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
 .modalSubtitle {
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+.layoutSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--shadow-tint), 0.25);
+  }
+}
+
+.layoutSwitchTrack {
+  position: relative;
+  width: 1.6rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background 0.15s ease;
+}
+
+.layoutSwitchThumb {
+  position: absolute;
+  top: 0.1rem;
+  left: 0.1rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease;
+}
+
+.layoutSwitchOn {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+
+  .layoutSwitchTrack {
+    background: var(--color-primary);
+  }
+
+  .layoutSwitchThumb {
+    transform: translateX(0.75rem);
+  }
 }
 
 .modalBody {
@@ -1095,6 +1165,41 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* Fields left, description right. minmax(0, …) stops long values widening a
+ * column past its share. */
+.ticketSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+/* The description grows to whatever height the field column ends up at. */
+.ticketSplitAside {
+  display: flex;
+
+  .formGroup {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+    width: 100%;
+  }
+
+  textarea {
+    flex: 1;
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 760px) {
+  .ticketSplit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ticketSplitAside textarea {
+    min-height: 90px;
+  }
 }
 
 .inputWithButton {

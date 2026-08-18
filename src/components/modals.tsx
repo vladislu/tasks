@@ -7,6 +7,7 @@ import {IconPlus, IconTrash, IconX} from './icons';
 import type {
   KanbanList,
   MetadataEntry,
+  TicketFormLayout,
   TicketPriority,
 } from '../kanban/types';
 import styles from './styles.module.scss';
@@ -15,11 +16,21 @@ import styles from './styles.module.scss';
  * Shell
  * ========================================================================== */
 
+type ModalWidth = 'default' | 'wide' | 'split';
+
+const MODAL_WIDTH_CLASS: Record<ModalWidth, string | undefined> = {
+  default: undefined,
+  wide: styles.modalWide,
+  split: styles.modalSplit,
+};
+
 interface ModalShellProps {
   title: string;
   subtitle?: string;
   submitLabel?: string;
-  wide?: boolean;
+  width?: ModalWidth;
+  /** Sits left of the close button, for options that change the form itself. */
+  headerAction?: React.ReactNode;
   error?: string | null;
   onSubmit: () => void;
   onClose: () => void;
@@ -30,7 +41,8 @@ export function ModalShell({
   title,
   subtitle,
   submitLabel = 'Save',
-  wide,
+  width = 'default',
+  headerAction,
   error,
   onSubmit,
   onClose,
@@ -45,7 +57,7 @@ export function ModalShell({
         onClick={onClose}
       />
       <form
-        className={clsx(styles.modalContent, wide && styles.modalWide)}
+        className={clsx(styles.modalContent, MODAL_WIDTH_CLASS[width])}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -58,13 +70,16 @@ export function ModalShell({
             <h3>{title}</h3>
             {subtitle && <p className={styles.modalSubtitle}>{subtitle}</p>}
           </div>
-          <button
-            type="button"
-            className={styles.btnIcon}
-            onClick={onClose}
-            aria-label="Close">
-            <IconX size={20} />
-          </button>
+          <div className={styles.modalHeaderActions}>
+            {headerAction}
+            <button
+              type="button"
+              className={styles.btnIcon}
+              onClick={onClose}
+              aria-label="Close">
+              <IconX size={20} />
+            </button>
+          </div>
         </div>
         <div className={styles.modalBody}>
           {error && <div className={styles.formError}>{error}</div>}
@@ -275,6 +290,29 @@ export function ListModal({
  * Ticket
  * ========================================================================== */
 
+function LayoutSwitch({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      className={clsx(styles.layoutSwitch, checked && styles.layoutSwitchOn)}
+      title="Put the description in its own column"
+      onClick={() => onChange(!checked)}>
+      New
+      <span className={styles.layoutSwitchTrack} aria-hidden>
+        <span className={styles.layoutSwitchThumb} />
+      </span>
+    </button>
+  );
+}
+
 export interface TicketDraft {
   listId: string;
   title: string;
@@ -291,6 +329,8 @@ export function TicketModal({
   initial,
   lists,
   suggestedTicketId,
+  layout,
+  onLayoutChange,
   onSubmit,
   onClose,
 }: {
@@ -299,6 +339,8 @@ export function TicketModal({
   initial: TicketDraft;
   lists: KanbanList[];
   suggestedTicketId: string;
+  layout: TicketFormLayout;
+  onLayoutChange: (layout: TicketFormLayout) => void;
   onSubmit: (draft: TicketDraft) => void;
   onClose: () => void;
 }) {
@@ -356,155 +398,193 @@ export function TicketModal({
     });
   };
 
+  const split = layout === 'split';
+
+  const titleField = (
+    <div className={styles.formGroup}>
+      <label htmlFor="kb-ticket-title">Title</label>
+      <input
+        id="kb-ticket-title"
+        type="text"
+        value={draft.title}
+        autoFocus
+        placeholder="What needs to be done"
+        onChange={(event) => update('title', event.target.value)}
+      />
+    </div>
+  );
+
+  const referenceRow = (
+    <div className={styles.formRow}>
+      <div className={styles.formGroup}>
+        <label htmlFor="kb-ticket-id">Ticket id</label>
+        <div className={styles.inputWithButton}>
+          <input
+            id="kb-ticket-id"
+            type="text"
+            value={draft.ticketId}
+            placeholder={suggestedTicketId}
+            onChange={(event) => update('ticketId', event.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.btnInline}
+            onClick={() => update('ticketId', suggestedTicketId)}>
+            Generate
+          </button>
+        </div>
+      </div>
+      <div className={styles.formGroup}>
+        <label htmlFor="kb-ticket-list">List</label>
+        <select
+          id="kb-ticket-list"
+          value={draft.listId}
+          onChange={(event) => update('listId', event.target.value)}>
+          {lists.map((list) => (
+            <option key={list.id} value={list.id}>
+              {list.title}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  const ownerRow = (
+    <div className={styles.formRow}>
+      <div className={styles.formGroup}>
+        <label htmlFor="kb-ticket-assigned">Assigned (optional)</label>
+        <input
+          id="kb-ticket-assigned"
+          type="text"
+          value={draft.assigned}
+          placeholder="e.g. v.sludaeve"
+          onChange={(event) => update('assigned', event.target.value)}
+        />
+      </div>
+      <div className={styles.formGroup}>
+        <label htmlFor="kb-ticket-priority">Priority (optional)</label>
+        <select
+          id="kb-ticket-priority"
+          value={draft.priority}
+          onChange={(event) =>
+            update('priority', event.target.value as TicketPriority | '')
+          }>
+          <option value="">None</option>
+          {PRIORITIES.map((priority) => (
+            <option key={priority} value={priority}>
+              {priority}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  const descriptionField = (
+    <div className={styles.formGroup}>
+      <label htmlFor="kb-ticket-description">Description (optional)</label>
+      <textarea
+        id="kb-ticket-description"
+        rows={3}
+        value={draft.description}
+        placeholder="Context, links, acceptance criteria…"
+        onChange={(event) => update('description', event.target.value)}
+      />
+    </div>
+  );
+
+  const metadataEditor = (
+    <div className={styles.metadataEditor}>
+      <div className={styles.metadataHeader}>
+        <span>Metadata</span>
+        <button
+          type="button"
+          className={styles.btnInline}
+          onClick={() =>
+            setDraft((prev) => ({
+              ...prev,
+              metadata: [...prev.metadata, {key: '', value: ''}],
+            }))
+          }>
+          <IconPlus size={12} /> Add field
+        </button>
+      </div>
+
+      {draft.metadata.length === 0 && (
+        <p className={styles.metadataEmpty}>No custom fields yet.</p>
+      )}
+
+      {draft.metadata.map((entry, index) => (
+        <div key={index} className={styles.metadataRow}>
+          <input
+            type="text"
+            value={entry.key}
+            aria-label={`Metadata key ${index + 1}`}
+            placeholder="key"
+            onChange={(event) =>
+              updateMetadata(index, {key: event.target.value})
+            }
+          />
+          <input
+            type="text"
+            value={entry.value}
+            aria-label={`Metadata value ${index + 1}`}
+            placeholder="value"
+            onChange={(event) =>
+              updateMetadata(index, {value: event.target.value})
+            }
+          />
+          <button
+            type="button"
+            className={clsx(styles.btnIcon, styles.btnDelete)}
+            aria-label={`Remove metadata field ${index + 1}`}
+            onClick={() =>
+              setDraft((prev) => ({
+                ...prev,
+                metadata: prev.metadata.filter((_, i) => i !== index),
+              }))
+            }>
+            <IconTrash size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <ModalShell
       title={title}
       submitLabel={submitLabel}
-      wide
+      width={split ? 'split' : 'wide'}
+      headerAction={
+        <LayoutSwitch
+          checked={split}
+          onChange={(checked) => onLayoutChange(checked ? 'split' : 'classic')}
+        />
+      }
       error={error}
       onSubmit={submit}
       onClose={onClose}>
-      <div className={styles.formGroup}>
-        <label htmlFor="kb-ticket-title">Title</label>
-        <input
-          id="kb-ticket-title"
-          type="text"
-          value={draft.title}
-          autoFocus
-          placeholder="What needs to be done"
-          onChange={(event) => update('title', event.target.value)}
-        />
-      </div>
-
-      <div className={styles.formRow}>
-        <div className={styles.formGroup}>
-          <label htmlFor="kb-ticket-id">Ticket id</label>
-          <div className={styles.inputWithButton}>
-            <input
-              id="kb-ticket-id"
-              type="text"
-              value={draft.ticketId}
-              placeholder={suggestedTicketId}
-              onChange={(event) => update('ticketId', event.target.value)}
-            />
-            <button
-              type="button"
-              className={styles.btnInline}
-              onClick={() => update('ticketId', suggestedTicketId)}>
-              Generate
-            </button>
+      {split ? (
+        <div className={styles.ticketSplit}>
+          <div>
+            {titleField}
+            {referenceRow}
+            {ownerRow}
+            {metadataEditor}
           </div>
+          <div className={styles.ticketSplitAside}>{descriptionField}</div>
         </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="kb-ticket-list">List</label>
-          <select
-            id="kb-ticket-list"
-            value={draft.listId}
-            onChange={(event) => update('listId', event.target.value)}>
-            {lists.map((list) => (
-              <option key={list.id} value={list.id}>
-                {list.title}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className={styles.formRow}>
-        <div className={styles.formGroup}>
-          <label htmlFor="kb-ticket-assigned">Assigned (optional)</label>
-          <input
-            id="kb-ticket-assigned"
-            type="text"
-            value={draft.assigned}
-            placeholder="e.g. v.sludaeve"
-            onChange={(event) => update('assigned', event.target.value)}
-          />
-        </div>
-        <div className={styles.formGroup}>
-          <label htmlFor="kb-ticket-priority">Priority (optional)</label>
-          <select
-            id="kb-ticket-priority"
-            value={draft.priority}
-            onChange={(event) =>
-              update('priority', event.target.value as TicketPriority | '')
-            }>
-            <option value="">None</option>
-            {PRIORITIES.map((priority) => (
-              <option key={priority} value={priority}>
-                {priority}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className={styles.formGroup}>
-        <label htmlFor="kb-ticket-description">Description (optional)</label>
-        <textarea
-          id="kb-ticket-description"
-          rows={3}
-          value={draft.description}
-          placeholder="Context, links, acceptance criteria…"
-          onChange={(event) => update('description', event.target.value)}
-        />
-      </div>
-
-      <div className={styles.metadataEditor}>
-        <div className={styles.metadataHeader}>
-          <span>Metadata</span>
-          <button
-            type="button"
-            className={styles.btnInline}
-            onClick={() =>
-              setDraft((prev) => ({
-                ...prev,
-                metadata: [...prev.metadata, {key: '', value: ''}],
-              }))
-            }>
-            <IconPlus size={12} /> Add field
-          </button>
-        </div>
-
-        {draft.metadata.length === 0 && (
-          <p className={styles.metadataEmpty}>No custom fields yet.</p>
-        )}
-
-        {draft.metadata.map((entry, index) => (
-          <div key={index} className={styles.metadataRow}>
-            <input
-              type="text"
-              value={entry.key}
-              aria-label={`Metadata key ${index + 1}`}
-              placeholder="key"
-              onChange={(event) =>
-                updateMetadata(index, {key: event.target.value})
-              }
-            />
-            <input
-              type="text"
-              value={entry.value}
-              aria-label={`Metadata value ${index + 1}`}
-              placeholder="value"
-              onChange={(event) =>
-                updateMetadata(index, {value: event.target.value})
-              }
-            />
-            <button
-              type="button"
-              className={clsx(styles.btnIcon, styles.btnDelete)}
-              aria-label={`Remove metadata field ${index + 1}`}
-              onClick={() =>
-                setDraft((prev) => ({
-                  ...prev,
-                  metadata: prev.metadata.filter((_, i) => i !== index),
-                }))
-              }>
-              <IconTrash size={12} />
-            </button>
-          </div>
-        ))}
-      </div>
+      ) : (
+        <>
+          {titleField}
+          {referenceRow}
+          {ownerRow}
+          {descriptionField}
+          {metadataEditor}
+        </>
+      )}
 
       <p className={styles.formHint}>
         Ticket id, assigned and priority are drawn by Mermaid. Custom metadata
